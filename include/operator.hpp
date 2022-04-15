@@ -44,6 +44,9 @@ public:
 
     static void matmulTN(Ty *C, Ty *A, Ty *B, size_t m, size_t n, size_t k);
 
+    static void matmulGeneral(Ty *C, Ty *A, Ty *B, size_t m, size_t n, size_t k,
+                              bool TransA, bool TransB, size_t LDA, size_t LDB);
+
     static void transpose(Ty *B, Ty *A, size_t m, size_t n);
 
     static void tenmat(Ty *B, Ty *A, const shape_t &shape, size_t n);

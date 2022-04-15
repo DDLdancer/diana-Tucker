@@ -85,7 +85,7 @@ namespace Function {
                 gram_buf_point = (gram_buf_point + 1) % kParN;
             }
             // Allreduce.
-            MPI_Comm comm_line = A.comm()->comm_split(new_rank, new_color);
+            MPI_Comm comm_line = A.comm()->comm_split(new_rank, new_color); // TODO: isn't this redundant?
             A.comm()->allreduce_inplace(gram_buf, (int) gram_buf_size, MPI_SUM,
                                         comm_line);
             // Gather.
@@ -278,51 +278,81 @@ namespace Function {
             Summary::start(METHOD_NAME);
             assert(M.is_matrix());
             assert(A.shape_global()[n] == M.shape()[1]);
+            // Coordinate calculation
             auto distrib = (DistributionCartesianBlock *) A.distribution();
             shape_t coord = distrib->coordinate();
             shape_t par = distrib->partition();
-            size_t row_length = M.shape()[0];
-            size_t col_length = M.shape()[1]; // M is of shape row_length * col_length.
-            size_t col_local = A.shape()[n];
-            size_t col_begin = DIANA_CEILDIV(col_length * coord[n], par[n]);
-            size_t col_end = DIANA_CEILDIV(col_length * (coord[n] + 1),
-                                           par[n]);
-            assert(col_end - col_begin == col_local);
-            size_t remain_size = A.size() / col_local;
+            const size_t kParN = par[n];
+            const size_t kCoordN = coord[n];
+            const size_t row_M = M.shape()[0];
+            const size_t col_M = M.shape()[1]; // M is of shape row_M * col_M.
+            const size_t remain_size = A.size() / A.shape()[n];
+            // Column coordinate of the submatrix
+            size_t col_local_size = A.shape()[n];
+            size_t col_local_begin = DIANA_CEILDIV(col_M * kCoordN, kParN);
+            size_t col_local_end = DIANA_CEILDIV(col_M * (kCoordN + 1), kParN);
+            assert(col_local_end - col_local_begin == col_local_size);
+            // Row coordinate of the submatrix
+            std::vector<size_t> row_local_begin;
+            row_local_begin.push_back(0);
+            size_t row_local_max = 0;
+            for (size_t i = 1; i < kParN + 1; i++) {
+                row_local_begin.push_back(DIANA_CEILDIV(row_M * i, kParN));
+                if(row_local_begin[i] - row_local_begin[i - 1] > row_local_max)
+                    row_local_max = row_local_begin[i] - row_local_begin[i - 1];
+            }
+            // Data preparation
+            size_t size_B_max = row_local_max * remain_size;
             Ty *data_A = A.data();
             Ty *data_M = M.data();
-            Ty *data_B = A.op()->alloc(A.size());
-            Ty *data_Anew = A.op()->alloc(row_length * remain_size);
+            Ty *data_A_matr = A.op()->alloc(A.size());
+            Ty *data_B_calc = A.op()->alloc(size_B_max);
+            Ty *data_B_buf[2];
+            data_B_buf[0] = A.op()->alloc(size_B_max);
+            data_B_buf[1] = A.op()->alloc(size_B_max);
             // Matricization
-            A.op()->tenmatt(data_B, data_A, A.shape(), n);
-            // Do TTM
-            A.op()->matmulNT(data_Anew, data_B,
-                             data_M + col_begin * row_length,
-                             remain_size, row_length, col_local);
+            A.op()->tenmatt(data_A_matr, data_A, A.shape(), n); // matrix of size remain_size * col_local_size
             // Split communicator
             MPI_Comm comm_fiber = distrib->process_fiber_comm(n);
-            // Do reduce-scatter
+            int rank;
+            MPI_Comm_rank(comm_fiber, &rank); // TODO: not looking pretty
+            int send_rank = (rank + 1) % (int)kParN;
+            int recv_rank = (rank - 1 + (int)kParN) % (int)kParN;
+            MPI_Request *request_send = A.comm()->new_request();
+            MPI_Request *request_recv = A.comm()->new_request();
+            // Begin the calculation
+            for(size_t i = 0; i < kParN; i++){
+                size_t k = ((size_t)rank - i - 1 + kParN) % kParN;
+                A.op()->matmulGeneral(data_B_calc, data_A_matr,
+                                      data_M + col_local_begin * row_M + row_local_begin[k],
+                                      remain_size, row_local_begin[k + 1] - row_local_begin[k],
+                                      col_local_size, false, true, remain_size, row_M);
+                if (i != 0) {
+                    A.comm()->wait(request_send);
+                    A.comm()->wait(request_recv);
+                    A.op()->add(data_B_buf[(i) % 2], data_B_buf[(i) % 2], data_B_calc, size_B_max);
+                }
+                else{
+                    Util::memcpy(data_B_buf[(i) % 2], data_B_calc, size_B_max * sizeof(Ty));
+                }
+                if(i != kParN - 1){
+                    A.comm()->isend(request_send, data_B_buf[(i) % 2],
+                                    (int)size_B_max, send_rank, comm_fiber);
+                    A.comm()->irecv(request_recv, data_B_buf[(i + 1) % 2],
+                                    (int)size_B_max, recv_rank, comm_fiber);
+                }
+            }
+            // Tensorization
             shape_t new_shape = A.shape_global();
-            new_shape[n] = row_length;
+            new_shape[n] = row_M;
             Tensor<Ty> ret(A.distribution(), new_shape, false);
             Ty *data_ret = ret.data();
-            Ty *data_ret_buf = ret.op()->alloc(ret.size());
-            auto *recvcounts = Operator<int>::alloc(par[n]);
-            for (size_t i = 0; i < par[n]; i++) {
-                recvcounts[i] =
-                        (int) DIANA_CEILDIV(row_length * (i + 1), par[n]) -
-                        (int) DIANA_CEILDIV(row_length * i, par[n]);
-                recvcounts[i] *= (int) remain_size;
-            }
-            ret.comm()->reduce_scatter(data_Anew, data_ret_buf, recvcounts,
-                                       MPI_SUM, comm_fiber);
-            // Tensorization
-            ret.op()->mattten(data_ret, data_ret_buf, ret.shape(), n);
+            ret.op()->mattten(data_ret, data_B_buf[(kParN - 1) % 2], ret.shape(), n);
             // Free spaces
-            A.op()->free(data_B);
-            A.op()->free(data_Anew);
-            A.op()->free(data_ret_buf);
-            Operator<int>::free(recvcounts);
+            A.op()->free(data_A_matr);
+            A.op()->free(data_B_buf[0]);
+            A.op()->free(data_B_buf[1]);
+            A.op()->free(data_B_calc);
             Summary::end(METHOD_NAME);
             return ret;
         }
