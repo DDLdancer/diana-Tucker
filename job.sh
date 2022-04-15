@@ -15,4 +15,4 @@ module load mkl/2017.1
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfs/share/software/gcc/9.3.0/lib64
 
-mpirun -n 6 diana-tucker
+mpiexec -n 6 diana-tucker input.txt
