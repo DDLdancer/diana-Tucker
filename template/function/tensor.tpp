@@ -85,7 +85,7 @@ namespace Function {
                 gram_buf_point = (gram_buf_point + 1) % kParN;
             }
             // Allreduce.
-            MPI_Comm comm_line = A.comm()->comm_split(new_rank, new_color); // TODO: isn't this redundant?
+            MPI_Comm comm_line = distrib->process_fiber_comm_rev(n);
             A.comm()->allreduce_inplace(gram_buf, (int) gram_buf_size, MPI_SUM,
                                         comm_line);
             // Gather.
@@ -218,8 +218,7 @@ namespace Function {
                 gram_buf_point = (gram_buf_point + 1) % kParN;
             }
             // Allreduce.
-            // TODO: optimize.
-            MPI_Comm comm_line = A.comm()->comm_split(new_rank, new_color);
+            MPI_Comm comm_line = distrib->process_fiber_comm_rev(n);
             // TODO: Not inplace?
             A.comm()->allreduce_inplace(gram_buf, (int) gram_buf_size, MPI_SUM,
                                         comm_line);

@@ -61,6 +61,7 @@ private:
     shape_t coordinate_;
     size_t ndim_;
     std::vector<MPI_Comm> process_fiber_comm_;
+    std::vector<MPI_Comm> process_fiber_comm_rev_;
 
 public:
     DistributionCartesianBlock(shape_t partition, int rank);
@@ -87,6 +88,8 @@ public:
     std::tuple<int, int> process_fiber(size_t n);
 
     MPI_Comm process_fiber_comm(size_t n);
+
+    MPI_Comm process_fiber_comm_rev(size_t n);
 };
 
 #endif

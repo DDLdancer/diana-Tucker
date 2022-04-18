@@ -90,6 +90,11 @@ DistributionCartesianBlock::DistributionCartesianBlock(shape_t partition,
         this->process_fiber_comm_.push_back(
                 Communicator<void>::comm_split(new_color, new_rank));
     }
+    for (size_t n = 0; n < this->ndim_; n++) {
+        auto[new_color, new_rank] = this->process_fiber(n);
+        this->process_fiber_comm_rev_.push_back(
+                Communicator<void>::comm_split(new_rank, new_color));
+    }
 }
 
 shape_t DistributionCartesianBlock::partition() const {
@@ -186,4 +191,8 @@ std::tuple<int, int> DistributionCartesianBlock::process_fiber(size_t n) {
 
 MPI_Comm DistributionCartesianBlock::process_fiber_comm(size_t n) {
     return this->process_fiber_comm_[n];
+}
+
+MPI_Comm DistributionCartesianBlock::process_fiber_comm_rev(size_t n) {
+    return this->process_fiber_comm_rev_[n];
 }
