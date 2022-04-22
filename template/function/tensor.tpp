@@ -338,7 +338,7 @@ namespace Function {
                     A.op()->add(data_B_buf[(i) % 2], data_B_buf[(i) % 2], data_B_calc, size_B_max);
                 }
                 else{
-                    Util::memcpy(data_B_buf[(i) % 2], data_B_calc, size_B_max * sizeof(Ty));
+                    A.op()->mcpy(data_B_buf[(i) % 2], data_B_calc, size_B_max);
                 }
                 if(i != kParN - 1){
                     A.comm()->isend(request_send, data_B_buf[(i) % 2],
