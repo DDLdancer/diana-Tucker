@@ -286,6 +286,12 @@ namespace Function {
             const size_t row_M = M.shape()[0];
             const size_t col_M = M.shape()[1]; // M is of shape row_M * col_M.
             const size_t remain_size = A.size() / A.shape()[n];
+            size_t size_dim1_n = 1;
+            for(size_t i = 0; i < n; i++)
+                size_dim1_n *= A.shape()[i];
+            size_t size_n_dimN = 1;
+            for(size_t i = n + 1; i < A.ndim(); i++)
+                size_n_dimN *= A.shape()[i];
             // Column coordinate of the submatrix
             size_t col_local_size = A.shape()[n];
             size_t col_local_begin = DIANA_CEILDIV(col_M * kCoordN, kParN);
@@ -304,13 +310,10 @@ namespace Function {
             size_t size_B_max = row_local_max * remain_size;
             Ty *data_A = A.data();
             Ty *data_M = M.data();
-            Ty *data_A_matr = A.op()->alloc(A.size());
             Ty *data_B_calc = A.op()->alloc(size_B_max);
             Ty *data_B_buf[2];
             data_B_buf[0] = A.op()->alloc(size_B_max);
             data_B_buf[1] = A.op()->alloc(size_B_max);
-            // Matricization
-            A.op()->tenmatt(data_A_matr, data_A, A.shape(), n); // matrix of size remain_size * col_local_size
             // Split communicator
             MPI_Comm comm_fiber = distrib->process_fiber_comm(n);
             int rank;
@@ -322,10 +325,13 @@ namespace Function {
             // Begin the calculation
             for(size_t i = 0; i < kParN; i++){
                 size_t k = ((size_t)rank - i - 1 + kParN) % kParN;
-                A.op()->matmulGeneral(data_B_calc, data_A_matr,
-                                      data_M + col_local_begin * row_M + row_local_begin[k],
-                                      remain_size, row_local_begin[k + 1] - row_local_begin[k],
-                                      col_local_size, false, true, remain_size, row_M);
+                for(size_t j = 0; j < size_n_dimN; j++){
+                    A.op()->matmulGeneral(data_B_calc + j * size_dim1_n * (row_local_begin[k + 1] - row_local_begin[k]),
+                                          data_A + j * size_dim1_n * col_local_size,
+                                          data_M + col_local_begin * row_M + row_local_begin[k],
+                                          size_dim1_n, row_local_begin[k + 1] - row_local_begin[k],
+                                          col_local_size, false, true, size_dim1_n, row_M);
+                }
                 if (i != 0) {
                     A.comm()->wait(request_send);
                     A.comm()->wait(request_recv);
@@ -346,9 +352,8 @@ namespace Function {
             new_shape[n] = row_M;
             Tensor<Ty> ret(A.distribution(), new_shape, false);
             Ty *data_ret = ret.data();
-            ret.op()->mattten(data_ret, data_B_buf[(kParN - 1) % 2], ret.shape(), n);
+            Util::memcpy(data_ret, data_B_buf[(kParN - 1) % 2], ret.size() * sizeof(Ty));
             // Free spaces
-            A.op()->free(data_A_matr);
             A.op()->free(data_B_buf[0]);
             A.op()->free(data_B_buf[1]);
             A.op()->free(data_B_calc);
