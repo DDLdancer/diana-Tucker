@@ -5,6 +5,6 @@ build/
 venv/
 doc/latex/*
 doc/html/*
-cmake-build-debug*
+cmake-build-*
 diana-tucker
 output
