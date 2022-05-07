@@ -4,15 +4,10 @@
 #SBATCH --qos=high
 #SBATCH --time=00:10:00
 #SBATCH -J diana-tucker
-#SBATCH --nodes=16
-#SBATCH --ntasks-per-node=1
+#SBATCH --nodes=4
+#SBATCH --ntasks-per-node=4
+#SBATCH --mail-type=BEGIN
+#SBATCH --mail-user=zhangyc.life@gmail.com
 
-module purge
-module load gcc/9.3.0
-module load openmpi/3.1.4-gcc-4.8.5
-module load lapack/3.9.0-gcc-4.8.5
-module load mkl/2017.1
-
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfs/share/software/gcc/9.3.0/lib64
-
-mpiexec -n 16 diana-tucker input.txt
+source ./wmenv.sh >> /dev/null
+mpirun -np 4 -genv OMP_NUM_THREADS=1 -genv I_MPI_PIN_DOMAIN=omp ./diana-tucker ./input_test_openmp.txt

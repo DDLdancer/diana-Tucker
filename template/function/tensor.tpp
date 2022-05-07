@@ -352,7 +352,7 @@ namespace Function {
             new_shape[n] = row_M;
             Tensor<Ty> ret(A.distribution(), new_shape, false);
             Ty *data_ret = ret.data();
-            Util::memcpy(data_ret, data_B_buf[(kParN - 1) % 2], ret.size() * sizeof(Ty));
+            A.op()->mcpy(data_ret, data_B_buf[(kParN - 1) % 2], ret.size());
             // Free spaces
             A.op()->free(data_B_buf[0]);
             A.op()->free(data_B_buf[1]);

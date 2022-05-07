@@ -10,10 +10,15 @@
 #include "summary.hpp"
 #include <fstream>
 
+#include <cstdio>
+#include <omp.h>
+
 int main(int argc, char *argv[]) {
     mpi_init(argc, argv);
     srand((unsigned int) 20000905);
     std::ifstream fin(argv[1]);
+
+    printf("from Process %d: maximum number of threads is %d\n", mpi_rank(), omp_get_max_threads());
 
     // Init shape
     size_t N;

@@ -1,45 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
 project(diana-tucker)
 
-list(APPEND CMAKE_PREFIX_PATH "/gpfs/share/software/lapack/3.9.0/gcc/4.8.5/lib/")
-
-if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-    set(HOMEBREW_PREFIX "/usr/local/Cellar"
-            CACHE PATH "Path to Homebrew installation")
-    set(APPLE_SILICON_HOMEBREW_PREFIX "/opt/homebrew"
-            CACHE PATH "Path to Homebrew installation")
-
-    list(APPEND CMAKE_PREFIX_PATH "/usr/local")
-    list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt")
-    list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/lapack")
-    list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/openblas")
-    list(APPEND CMAKE_PREFIX_PATH "${HOMEBREW_PREFIX}")
-    list(APPEND CMAKE_PREFIX_PATH "${HOMEBREW_PREFIX}/opt/lapack")
-    list(APPEND CMAKE_PREFIX_PATH "${HOMEBREW_PREFIX}/opt/openblas")
-    list(APPEND CMAKE_PREFIX_PATH "${APPLE_SILICON_HOMEBREW_PREFIX}")
-    list(APPEND CMAKE_PREFIX_PATH "${APPLE_SILICON_HOMEBREW_PREFIX}/opt/lapack")
-    list(APPEND CMAKE_PREFIX_PATH "${APPLE_SILICON_HOMEBREW_PREFIX}/opt/openblas")
-    message(STATUS "${CMAKE_PREFIX_PATH}")
-
-    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
-    set(CMAKE_HAVE_THREADS_LIBRARY 1)
-    set(CMAKE_USE_WIN32_THREADS_INIT 0)
-    set(CMAKE_USE_PTHREADS_INIT 1)
-    set(THREADS_PREFER_PTHREAD_FLAG ON)
-
-    list(TRANSFORM CMAKE_PREFIX_PATH APPEND "/include"
-            OUTPUT_VARIABLE CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES)
-    set(CMAKE_C_STANDARD_INCLUDE_DIRECTORIES "${CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES}")
-
-    set(CMAKE_FIND_FRAMEWORK NEVER)
-    set(CMAKE_FIND_APPBUNDLE NEVER)
-
-    set(CMAKE_FIND_USE_CMAKE_SYSTEM_PATH FALSE)
-    set(CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH FALSE)
-    set(BLA_VENDOR OpenBLAS)
-endif (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-
-
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 include(CheckCXXCompilerFlag)
@@ -57,7 +18,6 @@ set(SOURCES
         src/util.cpp
         src/operator/operator_float.cpp
         src/operator/operator_double.cpp
-        src/operator/operator_complex64.cpp
         src/communicator.cpp
         src/distribution.cpp
         include/summary.hpp
@@ -157,5 +117,5 @@ endif (USE_LAPACK)
 
 
 # subdirectory
-get_target_property(DIANA_LIBRARIES_LINKED ${PROJECT_NAME} LINK_LIBRARIES)
-add_subdirectory(tests)
+# get_target_property(DIANA_LIBRARIES_LINKED ${PROJECT_NAME} LINK_LIBRARIES)
+# add_subdirectory(tests)

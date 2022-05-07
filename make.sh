@@ -7,7 +7,7 @@ fi
 mkdir build
 
 cd build
-cmake -DUSE_OPENMP=0 -DUSE_LAPACK=1 -DUSE_MPI=1 ..
+cmake -DUSE_OPENMP=1 -DUSE_LAPACK=1 -DUSE_MPI=1 ..
 
 make -j
 
