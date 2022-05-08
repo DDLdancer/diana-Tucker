@@ -4,11 +4,15 @@
 
 template<typename Ty>
 Ty *Operator<Ty>::alloc(size_t n) {
+    DIANA_OPERATOR_FUNC_START;
     return (Ty *) std::malloc(n * sizeof(Ty));
 }
 
 template<typename Ty>
-void Operator<Ty>::free(Ty *A) { std::free(A); }
+void Operator<Ty>::free(Ty *A) {
+    DIANA_OPERATOR_FUNC_START;
+    std::free(A);
+}
 
 template<typename Ty>
 void Operator<Ty>::mcpy(Ty *dest, Ty *src, size_t len) {
@@ -31,6 +35,7 @@ void Operator<Ty>::transpose(Ty *B, Ty *A, size_t m, size_t n) {
 
 template<typename Ty>
 void Operator<Ty>::eye(Ty *A, size_t M) {
+    DIANA_OPERATOR_FUNC_START;
 #ifdef DIANA_OPENMP
 #pragma omp parallel for default(none) shared(A, M)
 #endif
@@ -56,8 +61,8 @@ void Operator<Ty>::eye(Ty *A, size_t M) {
  */
 template<typename Ty>
 void Operator<Ty>::tenmat(Ty *B, Ty *A, const shape_t &shape, size_t n) {
-    DIANA_OPERATOR_FUNC_START;
     size_t size = Util::calc_size(shape);
+    Summary::start(METHOD_NAME, (long long)size);
     size_t br = shape[n];            // Row block size of B.
     size_t bc = 1;                   // Column block size of B.
     for (size_t i = 0; i < n; i++) { // Calculate bc.
@@ -74,6 +79,7 @@ void Operator<Ty>::tenmat(Ty *B, Ty *A, const shape_t &shape, size_t n) {
             }
         }
     }
+    Summary::end(METHOD_NAME);
 }
 
 /**
@@ -87,9 +93,9 @@ void Operator<Ty>::tenmat(Ty *B, Ty *A, const shape_t &shape, size_t n) {
  */
 template<typename Ty>
 void Operator<Ty>::tenmatt(Ty *B, Ty *A, const shape_t &shape, size_t n) {
-    DIANA_OPERATOR_FUNC_START;
     // TODO: optimize
     size_t size = Util::calc_size(shape);
+    Summary::start(METHOD_NAME, (long long)size);
     size_t br = shape[n];            // Row block size of B.
     size_t bc = 1;                   // Column block size of B.
     for (size_t i = 0; i < n; i++) { // Calculate bc.
@@ -107,6 +113,7 @@ void Operator<Ty>::tenmatt(Ty *B, Ty *A, const shape_t &shape, size_t n) {
             }
         }
     }
+    Summary::end(METHOD_NAME);
 }
 
 /**
@@ -121,9 +128,9 @@ void Operator<Ty>::tenmatt(Ty *B, Ty *A, const shape_t &shape, size_t n) {
  */
 template<typename Ty>
 void Operator<Ty>::mattten(Ty *B, Ty *A, const shape_t &shape, size_t n) {
-    DIANA_OPERATOR_FUNC_START;
     // TODO: optimize
     size_t size = Util::calc_size(shape);
+    Summary::start(METHOD_NAME, (long long)size);
     size_t br = shape[n];            // Row block size of B.
     size_t bc = 1;                   // Column block size of B.
     for (size_t i = 0; i < n; i++) { // Calculate bc.
@@ -141,10 +148,12 @@ void Operator<Ty>::mattten(Ty *B, Ty *A, const shape_t &shape, size_t n) {
             }
         }
     }
+    Summary::end(METHOD_NAME);
 }
 
 template<typename Ty>
 Ty Operator<Ty>::sum(Ty *A, size_t n) {
+    DIANA_OPERATOR_FUNC_START;
     Ty ret = 0;
     for (size_t i = 0; i < n; i++) {
         ret += A[i];
