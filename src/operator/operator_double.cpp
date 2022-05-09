@@ -223,8 +223,6 @@ template<>
 void Operator<double>::matmulGeneral(double *C, double *A, double *B, size_t m, size_t n, size_t k,
                                      bool TransA, bool TransB, size_t LDA, size_t LDB) {
 #ifdef DIANA_BLAS
-    Summary::start(METHOD_NAME, 2 * (long long) m * (long long) n *
-                                (long long) k);
     double alpha = 1.0;
     double beta = 0.0;
     int ldc = (int) m;
@@ -236,7 +234,6 @@ void Operator<double>::matmulGeneral(double *C, double *A, double *B, size_t m, 
     cblas_dgemm(CblasColMajor, trans_A, CBLAS_TRANSPOSE_B, (int) m, (int) n,
                 (int) k,
                 alpha, A, (int)LDA, B, (int)LDB, beta, C, ldc);
-    Summary::end(METHOD_NAME);
 #else
     fatal("Cannot calculate matmulNT without BLAS!");
 #endif
